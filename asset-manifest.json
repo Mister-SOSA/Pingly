@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/pingly/static/css/main.b83bf955.css",
+    "main.js": "/pingly/static/js/main.af9a2076.js",
+    "static/js/453.19b8b734.chunk.js": "/pingly/static/js/453.19b8b734.chunk.js",
+    "index.html": "/pingly/index.html",
+    "main.b83bf955.css.map": "/pingly/static/css/main.b83bf955.css.map",
+    "main.af9a2076.js.map": "/pingly/static/js/main.af9a2076.js.map",
+    "453.19b8b734.chunk.js.map": "/pingly/static/js/453.19b8b734.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.b83bf955.css",
+    "static/js/main.af9a2076.js"
+  ]
+}
