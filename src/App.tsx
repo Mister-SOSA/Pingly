@@ -10,7 +10,6 @@ interface PingData {
   timestamp: number;
   smoothed?: number;
   status?: 'excellent' | 'good' | 'fair' | 'poor';
-  id: number; // Unique identifier for each data point
 }
 
 interface Stats {
@@ -60,7 +59,6 @@ const App: React.FC = () => {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const smoothingRef = useRef<number | null>(null);
   const trendRef = useRef<number[]>([]);
-  const [chartKey, setChartKey] = useState(0); // Force chart re-render to prevent sliding animations
 
   const getThemeColors = () => {
     const themes = {
@@ -244,17 +242,9 @@ const App: React.FC = () => {
 
         setPingData(prev => {
           const newData = [...prev, result];
-          let isAtMaxCapacity = false;
-
           // Keep only last N data points based on settings
           if (newData.length > advancedSettings.maxDataPoints) {
             newData.shift();
-            isAtMaxCapacity = true;
-          }
-
-          // Force chart re-render when we hit max capacity to prevent sliding animations
-          if (isAtMaxCapacity && advancedSettings.animateChart) {
-            setChartKey(prevKey => prevKey + 1);
           }
 
           const newStats = calculateStats(newData);
@@ -279,7 +269,6 @@ const App: React.FC = () => {
       }
       smoothingRef.current = null;
       trendRef.current = [];
-      setChartKey(0); // Reset chart key when monitoring stops
     }
 
     return () => {
@@ -287,7 +276,7 @@ const App: React.FC = () => {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isMonitoring, ping, calculateStats, updateConnectionStatus, advancedSettings.interval, advancedSettings.maxDataPoints, advancedSettings.smoothing, advancedSettings.animateChart]);
+  }, [isMonitoring, ping, calculateStats, updateConnectionStatus, advancedSettings.interval, advancedSettings.maxDataPoints, advancedSettings.smoothing]);
 
   const getStatusIcon = () => {
     switch (connectionStatus) {
@@ -350,14 +339,10 @@ const App: React.FC = () => {
       margin: { top: 5, right: 5, left: 5, bottom: 5 }
     };
 
-    // Only animate when we're still filling up the chart (not at max capacity)
-    // This prevents the sliding animation issue while keeping new point animations
-    const shouldAnimate = advancedSettings.animateChart && pingData.length < advancedSettings.maxDataPoints;
-
     switch (advancedSettings.chartType) {
       case 'area':
         return (
-          <AreaChart key={chartKey} {...commonProps}>
+          <AreaChart {...commonProps}>
             {advancedSettings.showGrid && (
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.3} />
             )}
@@ -388,10 +373,7 @@ const App: React.FC = () => {
               stroke={themeColors.primary}
               fill="url(#colorGradient)"
               strokeWidth={2}
-              isAnimationActive={shouldAnimate}
-              animationDuration={shouldAnimate ? 300 : 0}
-              animationBegin={0}
-              animationEasing="ease-out"
+              animationDuration={advancedSettings.animateChart ? 300 : 0}
               connectNulls={false}
               dot={advancedSettings.colorCodedPoints ? <CustomDot /> : false}
             />
@@ -400,7 +382,7 @@ const App: React.FC = () => {
 
       case 'bar':
         return (
-          <BarChart key={chartKey} {...commonProps}>
+          <BarChart {...commonProps}>
             {advancedSettings.showGrid && (
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.3} />
             )}
@@ -421,10 +403,7 @@ const App: React.FC = () => {
             )}
             <Bar
               dataKey={dataKey}
-              isAnimationActive={shouldAnimate}
-              animationDuration={shouldAnimate ? 300 : 0}
-              animationBegin={0}
-              animationEasing="ease-out"
+              animationDuration={advancedSettings.animateChart ? 300 : 0}
               radius={[4, 4, 0, 0]}
             >
               {advancedSettings.colorCodedPoints && pingData.map((entry, index) => (
@@ -436,7 +415,7 @@ const App: React.FC = () => {
 
       default:
         return (
-          <LineChart key={chartKey} {...commonProps}>
+          <LineChart {...commonProps}>
             {advancedSettings.showGrid && (
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.3} />
             )}
@@ -455,18 +434,33 @@ const App: React.FC = () => {
             {advancedSettings.showReferenceLine && (
               <ReferenceLine y={stats.avg} stroke="#6B7280" strokeDasharray="5 5" />
             )}
-            <Line
-              type="monotone"
-              dataKey={dataKey}
-              stroke={themeColors.primary}
-              strokeWidth={2}
-              dot={advancedSettings.colorCodedPoints ? <CustomDot /> : false}
-              isAnimationActive={shouldAnimate}
-              animationDuration={shouldAnimate ? 300 : 0}
-              animationBegin={0}
-              animationEasing="ease-out"
-              connectNulls={false}
-            />
+            {advancedSettings.colorCodedPoints ? (
+              <>
+                {['excellent', 'good', 'fair', 'poor'].map(status => (
+                  <Line
+                    key={status}
+                    type="monotone"
+                    dataKey={dataKey}
+                    stroke={getStatusColor(status)}
+                    strokeWidth={2}
+                    dot={false}
+                    animationDuration={advancedSettings.animateChart ? 300 : 0}
+                    connectNulls={true}
+                    data={pingData.filter(d => d.status === status)}
+                  />
+                ))}
+              </>
+            ) : (
+              <Line
+                type="monotone"
+                dataKey={dataKey}
+                stroke={themeColors.primary}
+                strokeWidth={2}
+                dot={advancedSettings.showDataLabels ? { r: 3, fill: themeColors.primary } : false}
+                animationDuration={advancedSettings.animateChart ? 300 : 0}
+                connectNulls={true}
+              />
+            )}
           </LineChart>
         );
     }
